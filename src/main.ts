@@ -20,29 +20,68 @@ if (!ctx) { // Throw an error if ctx can't be obtained (unsupported browser)
 
 const cursor = { active: false, x: 0, y: 0 };
 
-// When mouse is held down
+const lines: { x: number; y: number }[][] = [];
+const redoLines: { x: number; y: number }[][] = [];
+
+let currentLine: { x: number; y: number }[] | null = null;
+
+// Mouse is held down
 canvas.addEventListener("mousedown", (e) => {
-  cursor.active = true; // Mouse is held down
-  cursor.x = e.offsetX; // Set the starting x to where the player clicked x value
-  cursor.y = e.offsetY; // Set the starting x to where the player clicked y value
+  cursor.active = true;
+  cursor.x = e.offsetX;
+  cursor.y = e.offsetY;
+
+  currentLine = [];
+  lines.push(currentLine);
+  redoLines.splice(0, redoLines.length);
+  currentLine.push({ x: cursor.x, y: cursor.y });
+
+  canvas.dispatchEvent(new CustomEvent("drawing-changed"));
 });
 
-// When the mouse is moved
+// Mouse is moving
 canvas.addEventListener("mousemove", (e) => {
-  if (cursor.active) { // If the mouse is held down
-    ctx.beginPath();
-    ctx.moveTo(cursor.x, cursor.y); // Move to the next x and y
-    ctx.lineTo(e.offsetX, e.offsetY); // Make a line
-    ctx.stroke(); // Outline the path
-    cursor.x = e.offsetX; // Set the new x
-    cursor.y = e.offsetY; // Set the new y
+  if (cursor.active) {
+    cursor.x = e.offsetX;
+    cursor.y = e.offsetY;
+    if (!currentLine) { // Throw an error if currentLine can't be obtained
+      throw Error("Error! Unsupported browser.");
+    }
+    currentLine.push({ x: cursor.x, y: cursor.y });
+
+    canvas.dispatchEvent(new CustomEvent("drawing-changed"));
   }
 });
 
-// Mouse is no longer held down
+// Mouse isn't held down
 canvas.addEventListener("mouseup", () => {
   cursor.active = false;
+  currentLine = null;
+
+  canvas.dispatchEvent(new CustomEvent("drawing-changed"));
 });
+
+function redraw() {
+  if (!ctx) { // Throw an error if ctx can't be obtained (unsupported browser)
+    throw Error("Error! Unsupported browser.");
+  }
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  for (const line of lines) {
+    if (line.length > 1) {
+      ctx.beginPath();
+      const { x, y } = line[0];
+      ctx.moveTo(x, y);
+      for (const { x, y } of line) {
+        ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+  }
+}
+
+//document.body.append(document.createElement("br"));
+
+canvas.addEventListener("drawing-changed", redraw);
 
 // Create clear button
 const clearButton = document.createElement("button");
@@ -50,5 +89,32 @@ clearButton.innerHTML = "Clear";
 document.body.append(clearButton);
 
 clearButton.addEventListener("click", () => { // When button is clicked clear canvas
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  lines.splice(0, lines.length);
+  canvas.dispatchEvent(new CustomEvent("drawing-changed"));
+});
+
+// Undo button and function
+const undoButton = document.createElement("button");
+undoButton.innerHTML = "Undo";
+document.body.append(undoButton);
+
+undoButton.addEventListener("click", () => {
+  if (lines.length > 0) {
+    const prevLine = lines.pop()!;
+    redoLines.push(prevLine);
+    canvas.dispatchEvent(new CustomEvent("drawing-changed"));
+  }
+});
+
+// Redo button and function
+const redoButton = document.createElement("button");
+redoButton.innerHTML = "Redo";
+document.body.append(redoButton);
+
+redoButton.addEventListener("click", () => {
+  if (redoLines.length > 0) {
+    const nextLine = redoLines.pop()!;
+    lines.push(nextLine);
+    canvas.dispatchEvent(new CustomEvent("drawing-changed"));
+  }
 });
