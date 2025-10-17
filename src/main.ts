@@ -92,3 +92,28 @@ clearButton.addEventListener("click", () => { // When button is clicked clear ca
   lines.splice(0, lines.length);
   canvas.dispatchEvent(new CustomEvent("drawing-changed"));
 });
+// Undo button and function
+const undoButton = document.createElement("button");
+undoButton.innerHTML = "Undo";
+document.body.append(undoButton);
+
+undoButton.addEventListener("click", () => {
+  if (lines.length > 0) {
+    const prevLine = lines.pop()!;
+    redoLines.push(prevLine);
+    canvas.dispatchEvent(new CustomEvent("drawing-changed"));
+  }
+});
+
+// Redo button and function
+const redoButton = document.createElement("button");
+redoButton.innerHTML = "Redo";
+document.body.append(redoButton);
+
+redoButton.addEventListener("click", () => {
+  if (redoLines.length > 0) {
+    const nextLine = redoLines.pop()!;
+    lines.push(nextLine);
+    canvas.dispatchEvent(new CustomEvent("drawing-changed"));
+  }
+});
