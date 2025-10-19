@@ -18,36 +18,51 @@ if (!ctx) { // Throw an error if ctx can't be obtained (unsupported browser)
   throw Error("Error! Unsupported browser.");
 }
 
+interface DrawCommand {
+  display(ctx: CanvasRenderingContext2D): void;
+}
+
+function createLineCommand() {
+  const points: { x: number; y: number }[] = [];
+  return {
+    addPoint(x: number, y: number) {
+      points.push({ x, y });
+    },
+    display(ctx: CanvasRenderingContext2D) {
+      if (points.length < 2) return;
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i].x, points[i].y);
+      }
+      ctx.stroke();
+    },
+  };
+}
+
 const cursor = { active: false, x: 0, y: 0 };
 
-const lines: { x: number; y: number }[][] = [];
-const redoLines: { x: number; y: number }[][] = [];
+const commands: DrawCommand[] = [];
+const redoCommands: DrawCommand[] = [];
 
-let currentLine: { x: number; y: number }[] | null = null;
+let currentCommand: ReturnType<typeof createLineCommand> | null = null;
 
 // Mouse is held down
 canvas.addEventListener("mousedown", (e) => {
+  const cmd = createLineCommand();
   cursor.active = true;
-  cursor.x = e.offsetX;
-  cursor.y = e.offsetY;
-
-  currentLine = [];
-  lines.push(currentLine);
-  redoLines.splice(0, redoLines.length);
-  currentLine.push({ x: cursor.x, y: cursor.y });
+  cmd.addPoint(e.offsetX, e.offsetY);
+  currentCommand = cmd;
+  commands.push(cmd);
+  redoCommands.splice(0, redoCommands.length); // clear redo stack
 
   canvas.dispatchEvent(new CustomEvent("drawing-changed"));
 });
 
 // Mouse is moving
 canvas.addEventListener("mousemove", (e) => {
-  if (cursor.active) {
-    cursor.x = e.offsetX;
-    cursor.y = e.offsetY;
-    if (!currentLine) { // Throw an error if currentLine can't be obtained
-      throw Error("Error! Unsupported browser.");
-    }
-    currentLine.push({ x: cursor.x, y: cursor.y });
+  if (cursor.active && currentCommand) {
+    currentCommand.addPoint(e.offsetX, e.offsetY);
 
     canvas.dispatchEvent(new CustomEvent("drawing-changed"));
   }
@@ -56,51 +71,40 @@ canvas.addEventListener("mousemove", (e) => {
 // Mouse isn't held down
 canvas.addEventListener("mouseup", () => {
   cursor.active = false;
-  currentLine = null;
+  currentCommand = null;
 
   canvas.dispatchEvent(new CustomEvent("drawing-changed"));
 });
 
-function redraw() {
-  if (!ctx) { // Throw an error if ctx can't be obtained (unsupported browser)
-    throw Error("Error! Unsupported browser.");
-  }
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  for (const line of lines) {
-    if (line.length > 1) {
-      ctx.beginPath();
-      const { x, y } = line[0];
-      ctx.moveTo(x, y);
-      for (const { x, y } of line) {
-        ctx.lineTo(x, y);
-      }
-      ctx.stroke();
-    }
-  }
-}
-
 //document.body.append(document.createElement("br"));
 
-canvas.addEventListener("drawing-changed", redraw);
+canvas.addEventListener("drawing-changed", () => {
+  if (!ctx) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  for (const cmd of commands) {
+    cmd.display(ctx);
+  }
+});
 
 // Create clear button
 const clearButton = document.createElement("button");
 clearButton.innerHTML = "Clear";
 document.body.append(clearButton);
 
-clearButton.addEventListener("click", () => { // When button is clicked clear canvas
-  lines.splice(0, lines.length);
+clearButton.addEventListener("click", () => {
+  commands.splice(0, commands.length);
   canvas.dispatchEvent(new CustomEvent("drawing-changed"));
 });
+
 // Undo button and function
 const undoButton = document.createElement("button");
 undoButton.innerHTML = "Undo";
 document.body.append(undoButton);
 
 undoButton.addEventListener("click", () => {
-  if (lines.length > 0) {
-    const prevLine = lines.pop()!;
-    redoLines.push(prevLine);
+  if (commands.length > 0) {
+    const last = commands.pop()!;
+    redoCommands.push(last);
     canvas.dispatchEvent(new CustomEvent("drawing-changed"));
   }
 });
@@ -111,9 +115,9 @@ redoButton.innerHTML = "Redo";
 document.body.append(redoButton);
 
 redoButton.addEventListener("click", () => {
-  if (redoLines.length > 0) {
-    const nextLine = redoLines.pop()!;
-    lines.push(nextLine);
+  if (redoCommands.length > 0) {
+    const next = redoCommands.pop()!;
+    commands.push(next);
     canvas.dispatchEvent(new CustomEvent("drawing-changed"));
   }
 });
