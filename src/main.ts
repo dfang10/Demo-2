@@ -138,6 +138,5 @@ thickButton.innerHTML = "Thick";
 document.body.append(thickButton);
 
 thickButton.addEventListener("click", () => {
-brushSize = 5;
+  brushSize = 5;
 });
-
