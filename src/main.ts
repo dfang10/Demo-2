@@ -20,6 +20,35 @@ if (!ctx) { // Throw an error if ctx can't be obtained (unsupported browser)
 interface DrawCommand {
   display(ctx: CanvasRenderingContext2D): void;
 }
+interface PreviewCommand {
+  draw(ctx: CanvasRenderingContext2D): void;
+  setPosition(x: number, y: number): void;
+}
+
+class MarkerPreview implements PreviewCommand {
+  x = 0;
+  y = 0;
+  radius = 0;
+
+  constructor(radius: number) {
+    this.radius = radius;
+  }
+
+  setPosition(x: number, y: number) {
+    this.x = x;
+    this.y = y;
+  }
+
+  draw(ctx: CanvasRenderingContext2D) {
+    ctx.save();
+    ctx.globalAlpha = 0.4;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.fillStyle = 'black';
+    ctx.fill();
+    ctx.restore();
+  }
+}
 
 function createLineCommand(width: number) {
   const points: { x: number; y: number }[] = [];
@@ -48,7 +77,10 @@ const redoCommands: DrawCommand[] = [];
 let currentCommand: ReturnType<typeof createLineCommand> | null = null;
 let brushSize = 2;
 const curTool: "marker" | "sticker" = "marker";
-let preview: { x: number; y: number } | null = null;
+let currentPreview: PreviewCommand | null = null;
+
+
+currentPreview = new MarkerPreview(brushSize / 2);
 
 // Mouse is held down
 canvas.addEventListener("mousedown", (e) => {
@@ -68,13 +100,38 @@ canvas.addEventListener("mousemove", (e) => {
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
 
-  preview = { x, y };
-
   if (cursor.active && currentCommand) {
-    currentCommand.addPoint(e.offsetX, e.offsetY);
+    currentCommand.addPoint(x, y);
+    canvas.dispatchEvent(new CustomEvent("drawing-changed"));
+  } else {
+    // Update preview position if it exists
+    if (currentPreview) {
+      currentPreview.setPosition(x, y);
+    }
+    canvas.dispatchEvent(new CustomEvent("tool-moved"));
   }
-  canvas.dispatchEvent(new CustomEvent("drawing-changed"));
 });
+
+function render() {
+  if (!ctx) return;
+
+  // Always redraw from scratch
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Draw all saved commands
+  for (const cmd of commands) {
+    cmd.display(ctx);
+  }
+
+  // Draw preview only if mouse is up and preview exists
+  if (!cursor.active && currentPreview) {
+    currentPreview.draw(ctx);
+  }
+}
+
+// Attach both events to the same render
+canvas.addEventListener("drawing-changed", render);
+canvas.addEventListener("tool-moved", render);
 
 // Mouse isn't held down
 canvas.addEventListener("mouseup", () => {
@@ -92,10 +149,10 @@ canvas.addEventListener("drawing-changed", () => {
   for (const cmd of commands) {
     cmd.display(ctx);
   }
-  if (preview && !cursor.active && curTool === "marker") {
+  if (currentPreview && !cursor.active && curTool === "marker") {
     ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
     ctx.beginPath();
-    ctx.arc(preview.x, preview.y, brushSize / 2, 0, Math.PI * 2);
+    //ctx.arc(currentPreview.x, currentPreview.y, brushSize / 2, 0, Math.PI * 2);
     ctx.fill();
   }
 });
@@ -143,7 +200,8 @@ document.body.append(thinButton);
 
 thinButton.addEventListener("click", () => {
   brushSize = 2;
-  canvas.dispatchEvent(new CustomEvent("drawing-changed"));
+  currentPreview = new MarkerPreview(brushSize / 2);
+  canvas.dispatchEvent(new CustomEvent("tool-moved"));
 });
 
 // Thick marker
@@ -153,5 +211,8 @@ document.body.append(thickButton);
 
 thickButton.addEventListener("click", () => {
   brushSize = 5;
-  canvas.dispatchEvent(new CustomEvent("drawing-changed"));
+  currentPreview = new MarkerPreview(brushSize / 2);
+  canvas.dispatchEvent(new CustomEvent("tool-moved"));
 });
+
+console.log("hi");
