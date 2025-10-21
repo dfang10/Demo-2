@@ -44,7 +44,7 @@ class MarkerPreview implements PreviewCommand {
     ctx.globalAlpha = 0.4;
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-    ctx.fillStyle = 'black';
+    ctx.fillStyle = "black";
     ctx.fill();
     ctx.restore();
   }
@@ -78,7 +78,6 @@ let currentCommand: ReturnType<typeof createLineCommand> | null = null;
 let brushSize = 2;
 const curTool: "marker" | "sticker" = "marker";
 let currentPreview: PreviewCommand | null = null;
-
 
 currentPreview = new MarkerPreview(brushSize / 2);
 
