@@ -12,7 +12,6 @@ canvas.id = "drawcanvas";
 document.body.appendChild(canvas);
 
 // Handle drawing
-// Code taken from cmpm-121-f25-quaint=paint paint0
 const ctx = canvas.getContext("2d");
 if (!ctx) { // Throw an error if ctx can't be obtained (unsupported browser)
   throw Error("Error! Unsupported browser.");
@@ -41,12 +40,27 @@ function createLineCommand(width: number) {
   };
 }
 
+// function toolPreview(x: number, y: number){
+//   const ctx = canvas.getContext("2d");
+//   if (!ctx) return;
+
+//   if (curTool === 'marker') {
+//     ctx.fillStyle = 'rgba(0, 0, 0, 0.3)'; // Faint preview
+//     ctx.beginPath();
+//     ctx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
+//     ctx.fill();
+//   }
+// }
+
 const cursor = { active: false, x: 0, y: 0 };
+
 const commands: DrawCommand[] = [];
 const redoCommands: DrawCommand[] = [];
 
 let currentCommand: ReturnType<typeof createLineCommand> | null = null;
 let brushSize = 2;
+let curTool: "marker" | "sticker" = "marker";
+let preview: { x: number; y: number } | null = null;
 
 // Mouse is held down
 canvas.addEventListener("mousedown", (e) => {
@@ -62,11 +76,16 @@ canvas.addEventListener("mousedown", (e) => {
 
 // Mouse is moving
 canvas.addEventListener("mousemove", (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  preview = { x, y };
+
   if (cursor.active && currentCommand) {
     currentCommand.addPoint(e.offsetX, e.offsetY);
-
-    canvas.dispatchEvent(new CustomEvent("drawing-changed"));
   }
+  canvas.dispatchEvent(new CustomEvent("drawing-changed"));
 });
 
 // Mouse isn't held down
@@ -84,6 +103,12 @@ canvas.addEventListener("drawing-changed", () => {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   for (const cmd of commands) {
     cmd.display(ctx);
+  }
+  if (preview && !cursor.active && curTool === "marker") {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+    ctx.beginPath();
+    ctx.arc(preview.x, preview.y, brushSize / 2, 0, Math.PI * 2);
+    ctx.fill();
   }
 });
 
@@ -130,6 +155,7 @@ document.body.append(thinButton);
 
 thinButton.addEventListener("click", () => {
   brushSize = 2;
+  canvas.dispatchEvent(new CustomEvent("drawing-changed"));
 });
 
 // Thick marker
@@ -139,4 +165,5 @@ document.body.append(thickButton);
 
 thickButton.addEventListener("click", () => {
   brushSize = 5;
+  canvas.dispatchEvent(new CustomEvent("drawing-changed"));
 });
