@@ -47,7 +47,7 @@ const redoCommands: DrawCommand[] = [];
 
 let currentCommand: ReturnType<typeof createLineCommand> | null = null;
 let brushSize = 2;
-let curTool: "marker" | "sticker" = "marker";
+const curTool: "marker" | "sticker" = "marker";
 let preview: { x: number; y: number } | null = null;
 
 // Mouse is held down
