@@ -42,7 +42,6 @@ function createLineCommand(width: number) {
 
 const cursor = { active: false, x: 0, y: 0 };
 
-
 const commands: DrawCommand[] = [];
 const redoCommands: DrawCommand[] = [];
 
