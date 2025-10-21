@@ -12,7 +12,10 @@ canvas.id = "drawcanvas";
 document.body.appendChild(canvas);
 
 // Handle drawing
+<<<<<<< HEAD
 // Code taken from cmpm-121-f25-quaint=paint paint0
+=======
+>>>>>>> 8836004 (testing git commands with alternative set up)
 const ctx = canvas.getContext("2d");
 if (!ctx) { // Throw an error if ctx can't be obtained (unsupported browser)
   throw Error("Error! Unsupported browser.");
@@ -121,3 +124,17 @@ redoButton.addEventListener("click", () => {
     canvas.dispatchEvent(new CustomEvent("drawing-changed"));
   }
 });
+<<<<<<< HEAD
+=======
+
+// Thin marker
+const thinButton = document.createElement("button");
+thinButton.innerHTML = "Thinner";
+document.body.append(thinButton);
+
+// Thick marker
+const thickButton = document.createElement("button");
+thickButton.innerHTML = "Thicker";
+document.body.append(thickButton);
+
+>>>>>>> 8836004 (testing git commands with alternative set up)
