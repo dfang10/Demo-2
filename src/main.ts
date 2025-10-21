@@ -40,19 +40,8 @@ function createLineCommand(width: number) {
   };
 }
 
-// function toolPreview(x: number, y: number){
-//   const ctx = canvas.getContext("2d");
-//   if (!ctx) return;
-
-//   if (curTool === 'marker') {
-//     ctx.fillStyle = 'rgba(0, 0, 0, 0.3)'; // Faint preview
-//     ctx.beginPath();
-//     ctx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
-//     ctx.fill();
-//   }
-// }
-
 const cursor = { active: false, x: 0, y: 0 };
+
 
 const commands: DrawCommand[] = [];
 const redoCommands: DrawCommand[] = [];
