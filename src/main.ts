@@ -22,7 +22,7 @@ interface DrawCommand {
   display(ctx: CanvasRenderingContext2D): void;
 }
 
-function createLineCommand() {
+function createLineCommand(width: number) {
   const points: { x: number; y: number }[] = [];
   return {
     addPoint(x: number, y: number) {
@@ -31,6 +31,7 @@ function createLineCommand() {
     display(ctx: CanvasRenderingContext2D) {
       if (points.length < 2) return;
       ctx.beginPath();
+      ctx.lineWidth = width;
       ctx.moveTo(points[0].x, points[0].y);
       for (let i = 1; i < points.length; i++) {
         ctx.lineTo(points[i].x, points[i].y);
@@ -46,6 +47,7 @@ const commands: DrawCommand[] = [];
 const redoCommands: DrawCommand[] = [];
 
 let currentCommand: ReturnType<typeof createLineCommand> | null = null;
+let brushSize = 2;
 
 // Mouse is held down
 canvas.addEventListener("mousedown", (e) => {
@@ -124,10 +126,19 @@ redoButton.addEventListener("click", () => {
 
 // Thin marker
 const thinButton = document.createElement("button");
-thinButton.innerHTML = "Thinner";
+thinButton.innerHTML = "Thin";
 document.body.append(thinButton);
+
+thinButton.addEventListener("click", () => {
+  brushSize = 2;
+});
 
 // Thick marker
 const thickButton = document.createElement("button");
-thickButton.innerHTML = "Thicker";
+thickButton.innerHTML = "Thick";
 document.body.append(thickButton);
+
+thickButton.addEventListener("click", () => {
+brushSize = 5;
+});
+
