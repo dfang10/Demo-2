@@ -12,10 +12,7 @@ canvas.id = "drawcanvas";
 document.body.appendChild(canvas);
 
 // Handle drawing
-<<<<<<< HEAD
-=======
 // Code taken from cmpm-121-f25-quaint=paint paint0
->>>>>>> 7344e9c231a89903dfaf2958d70d158acb7da7d4
 const ctx = canvas.getContext("2d");
 if (!ctx) { // Throw an error if ctx can't be obtained (unsupported browser)
   throw Error("Error! Unsupported browser.");
