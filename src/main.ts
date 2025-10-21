@@ -44,8 +44,33 @@ class MarkerPreview implements PreviewCommand {
     ctx.globalAlpha = 0.4;
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-    ctx.fillStyle = "black";
+    ctx.fillStyle = 'black';
     ctx.fill();
+    ctx.restore();
+  }
+}
+
+class StickerPreview implements PreviewCommand {
+  x = 0;
+  y = 0;
+  sticker: string;
+
+  constructor(sticker: string) {
+    this.sticker = sticker;
+  }
+
+  setPosition(x: number, y: number) {
+    this.x = x;
+    this.y = y;
+  }
+
+  draw(ctx: CanvasRenderingContext2D) {
+    ctx.save();
+    ctx.globalAlpha = 0.6;
+    ctx.font = "32px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(this.sticker, this.x, this.y);
     ctx.restore();
   }
 }
@@ -69,26 +94,63 @@ function createLineCommand(width: number) {
   };
 }
 
+function createStickerCommand(sticker: string, x: number, y: number) {
+  return {
+    display(ctx: CanvasRenderingContext2D) {
+      ctx.save();
+      ctx.font = "32px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(sticker, x, y);
+      ctx.restore();
+    },
+  };
+}
+
 const cursor = { active: false, x: 0, y: 0 };
 
 const commands: DrawCommand[] = [];
 const redoCommands: DrawCommand[] = [];
+const stickers = ["🔥", "🦷", "🍎"];
+let curSticker = stickers[0];
 
 let currentCommand: ReturnType<typeof createLineCommand> | null = null;
 let brushSize = 2;
-const curTool: "marker" | "sticker" = "marker";
+let curTool: "marker" | "sticker" = "marker";
 let currentPreview: PreviewCommand | null = null;
+
 
 currentPreview = new MarkerPreview(brushSize / 2);
 
+
+stickers.forEach((emoji) => {
+  const btn = document.createElement("button");
+  btn.textContent = emoji;
+  document.body.append(btn);
+  btn.addEventListener("click", () => {
+    curTool = "sticker";
+    curSticker = emoji;
+    currentPreview = new StickerPreview(curSticker);
+    canvas.dispatchEvent(new CustomEvent("tool-moved"));
+  });
+});
+
 // Mouse is held down
 canvas.addEventListener("mousedown", (e) => {
-  const cmd = createLineCommand(brushSize);
-  cursor.active = true;
-  cmd.addPoint(e.offsetX, e.offsetY);
-  currentCommand = cmd;
-  commands.push(cmd);
-  redoCommands.splice(0, redoCommands.length); // clear redo stack
+  const x = e.offsetX;
+  const y = e.offsetY;
+  if (curTool === "marker") {
+    const cmd = createLineCommand(brushSize);
+    cursor.active = true;
+    cmd.addPoint(x, y);
+    currentCommand = cmd;
+    commands.push(cmd);
+    redoCommands.length = 0;
+  } else if (curTool === "sticker") {
+    const cmd = createStickerCommand(curSticker, x, y);
+    commands.push(cmd);
+    redoCommands.length = 0;
+  }
 
   canvas.dispatchEvent(new CustomEvent("drawing-changed"));
 });
@@ -151,7 +213,6 @@ canvas.addEventListener("drawing-changed", () => {
   if (currentPreview && !cursor.active && curTool === "marker") {
     ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
     ctx.beginPath();
-    //ctx.arc(currentPreview.x, currentPreview.y, brushSize / 2, 0, Math.PI * 2);
     ctx.fill();
   }
 });
@@ -197,21 +258,21 @@ const thinButton = document.createElement("button");
 thinButton.innerHTML = "Thin";
 document.body.append(thinButton);
 
-thinButton.addEventListener("click", () => {
+thinButton.onclick = () => {
+  curTool = "marker";
   brushSize = 2;
   currentPreview = new MarkerPreview(brushSize / 2);
   canvas.dispatchEvent(new CustomEvent("tool-moved"));
-});
+};
 
 // Thick marker
 const thickButton = document.createElement("button");
 thickButton.innerHTML = "Thick";
 document.body.append(thickButton);
 
-thickButton.addEventListener("click", () => {
+thickButton.onclick = () => {
+  curTool = "marker";
   brushSize = 5;
   currentPreview = new MarkerPreview(brushSize / 2);
   canvas.dispatchEvent(new CustomEvent("tool-moved"));
-});
-
-console.log("hi");
+};
