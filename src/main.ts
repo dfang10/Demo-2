@@ -152,7 +152,10 @@ addStickerBtn.textContent = "+ Custom Sticker";
 document.body.append(addStickerBtn);
 
 addStickerBtn.addEventListener("click", () => {
-  const customSticker = prompt("Enter your custom sticker (emoji or text):", "⭐");
+  const customSticker = prompt(
+    "Enter your custom sticker (emoji or text):",
+    "⭐",
+  );
   if (customSticker && customSticker.trim() !== "") {
     stickers.push(customSticker);
 
