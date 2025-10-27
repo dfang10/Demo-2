@@ -107,6 +107,20 @@ function createStickerCommand(sticker: string, x: number, y: number) {
   };
 }
 
+function render() {
+  if (!ctx) return;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  for (const cmd of commands) {
+    cmd.display(ctx);
+  }
+
+  if (!cursor.active && currentPreview) {
+    currentPreview.draw(ctx);
+  }
+}
+
 const cursor = { active: false, x: 0, y: 0 };
 
 const commands: DrawCommand[] = [];
@@ -131,6 +145,27 @@ stickers.forEach((emoji) => {
     currentPreview = new StickerPreview(curSticker);
     canvas.dispatchEvent(new CustomEvent("tool-moved"));
   });
+});
+
+const addStickerBtn = document.createElement("button");
+addStickerBtn.textContent = "+ Custom Sticker";
+document.body.append(addStickerBtn);
+
+addStickerBtn.addEventListener("click", () => {
+  const customSticker = prompt("Enter your custom sticker (emoji or text):", "⭐");
+  if (customSticker && customSticker.trim() !== "") {
+    stickers.push(customSticker);
+
+    const btn = document.createElement("button");
+    btn.textContent = customSticker;
+    document.body.insertBefore(btn, addStickerBtn);
+    btn.addEventListener("click", () => {
+      curTool = "sticker";
+      curSticker = customSticker;
+      currentPreview = new StickerPreview(curSticker);
+      canvas.dispatchEvent(new CustomEvent("tool-moved"));
+    });
+  }
 });
 
 // Mouse is held down
@@ -171,23 +206,6 @@ canvas.addEventListener("mousemove", (e) => {
   }
 });
 
-function render() {
-  if (!ctx) return;
-
-  // Always redraw from scratch
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // Draw all saved commands
-  for (const cmd of commands) {
-    cmd.display(ctx);
-  }
-
-  // Draw preview only if mouse is up and preview exists
-  if (!cursor.active && currentPreview) {
-    currentPreview.draw(ctx);
-  }
-}
-
 // Attach both events to the same render
 canvas.addEventListener("drawing-changed", render);
 canvas.addEventListener("tool-moved", render);
@@ -198,21 +216,6 @@ canvas.addEventListener("mouseup", () => {
   currentCommand = null;
 
   canvas.dispatchEvent(new CustomEvent("drawing-changed"));
-});
-
-//document.body.append(document.createElement("br"));
-
-canvas.addEventListener("drawing-changed", () => {
-  if (!ctx) return;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  for (const cmd of commands) {
-    cmd.display(ctx);
-  }
-  if (currentPreview && !cursor.active && curTool === "marker") {
-    ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
-    ctx.beginPath();
-    ctx.fill();
-  }
 });
 
 // Create clear button
