@@ -280,3 +280,30 @@ thickButton.onclick = () => {
   currentPreview = new MarkerPreview(brushSize / 2);
   canvas.dispatchEvent(new CustomEvent("tool-moved"));
 };
+
+// Export button
+const exportButton = document.createElement("button");
+exportButton.innerHTML = "Export";
+document.body.append(exportButton);
+
+exportButton.addEventListener("click", () => {
+  const exportCanvas = document.createElement("canvas");
+  exportCanvas.width = 1024;
+  exportCanvas.height = 1024;
+  const exportCtx = exportCanvas.getContext("2d");
+  if (!exportCtx) return;
+
+  const scaleFactor = exportCanvas.width / canvas.width; // 1024 / 256 = 4
+  exportCtx.scale(scaleFactor, scaleFactor);
+
+  // 3️⃣ Redraw all saved commands (NO preview)
+  for (const cmd of commands) {
+    cmd.display(exportCtx);
+  }
+
+  // 4️⃣ Trigger file download
+  const anchor = document.createElement("a");
+  anchor.href = exportCanvas.toDataURL("image/png");
+  anchor.download = "sketchpad.png";
+  anchor.click();
+});
