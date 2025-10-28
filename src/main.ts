@@ -54,9 +54,11 @@ class StickerPreview implements PreviewCommand {
   x = 0;
   y = 0;
   sticker: string;
+  size: number;
 
-  constructor(sticker: string) {
+  constructor(sticker: string, size = 16) {
     this.sticker = sticker;
+    this.size = size;
   }
 
   setPosition(x: number, y: number) {
@@ -67,7 +69,7 @@ class StickerPreview implements PreviewCommand {
   draw(ctx: CanvasRenderingContext2D) {
     ctx.save();
     ctx.globalAlpha = 0.6;
-    ctx.font = "32px sans-serif";
+    ctx.font = `${this.size}px sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(this.sticker, this.x, this.y);
@@ -94,11 +96,16 @@ function createLineCommand(width: number) {
   };
 }
 
-function createStickerCommand(sticker: string, x: number, y: number) {
+function createStickerCommand(
+  sticker: string,
+  x: number,
+  y: number,
+  size = 16,
+) {
   return {
     display(ctx: CanvasRenderingContext2D) {
       ctx.save();
-      ctx.font = "32px sans-serif";
+      ctx.font = `${size}px sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(sticker, x, y);
@@ -129,7 +136,7 @@ const stickers = ["🔥", "🦷", "🍎"];
 let curSticker = stickers[0];
 
 let currentCommand: ReturnType<typeof createLineCommand> | null = null;
-let brushSize = 2;
+let brushSize = 1;
 let curTool: "marker" | "sticker" = "marker";
 let currentPreview: PreviewCommand | null = null;
 
@@ -139,23 +146,21 @@ stickers.forEach((emoji) => {
   const btn = document.createElement("button");
   btn.textContent = emoji;
   document.body.append(btn);
+
   btn.addEventListener("click", () => {
     curTool = "sticker";
     curSticker = emoji;
-    currentPreview = new StickerPreview(curSticker);
+    currentPreview = new StickerPreview(curSticker, 16);
     canvas.dispatchEvent(new CustomEvent("tool-moved"));
   });
 });
 
 const addStickerBtn = document.createElement("button");
-addStickerBtn.textContent = "+ Custom Sticker";
+addStickerBtn.textContent = "🪄";
 document.body.append(addStickerBtn);
 
 addStickerBtn.addEventListener("click", () => {
-  const customSticker = prompt(
-    "Enter your custom sticker (emoji or text):",
-    "⭐",
-  );
+  const customSticker = prompt("Enter your custom sticker:", "⭐");
   if (customSticker && customSticker.trim() !== "") {
     stickers.push(customSticker);
 
@@ -183,7 +188,7 @@ canvas.addEventListener("mousedown", (e) => {
     commands.push(cmd);
     redoCommands.length = 0;
   } else if (curTool === "sticker") {
-    const cmd = createStickerCommand(curSticker, x, y);
+    const cmd = createStickerCommand(curSticker, x, y, 16);
     commands.push(cmd);
     redoCommands.length = 0;
   }
@@ -233,7 +238,7 @@ clearButton.addEventListener("click", () => {
 
 // Undo button and function
 const undoButton = document.createElement("button");
-undoButton.innerHTML = "Undo";
+undoButton.innerHTML = "↩️";
 document.body.append(undoButton);
 
 undoButton.addEventListener("click", () => {
@@ -246,7 +251,7 @@ undoButton.addEventListener("click", () => {
 
 // Redo button and function
 const redoButton = document.createElement("button");
-redoButton.innerHTML = "Redo";
+redoButton.innerHTML = "↪️";
 document.body.append(redoButton);
 
 redoButton.addEventListener("click", () => {
@@ -259,31 +264,31 @@ redoButton.addEventListener("click", () => {
 
 // Thin marker
 const thinButton = document.createElement("button");
-thinButton.innerHTML = "Thin";
+thinButton.innerHTML = "✏️";
 document.body.append(thinButton);
 
 thinButton.onclick = () => {
   curTool = "marker";
-  brushSize = 2;
+  brushSize = 1;
   currentPreview = new MarkerPreview(brushSize / 2);
   canvas.dispatchEvent(new CustomEvent("tool-moved"));
 };
 
 // Thick marker
 const thickButton = document.createElement("button");
-thickButton.innerHTML = "Thick";
+thickButton.innerHTML = "🖌️";
 document.body.append(thickButton);
 
 thickButton.onclick = () => {
   curTool = "marker";
-  brushSize = 5;
+  brushSize = 8;
   currentPreview = new MarkerPreview(brushSize / 2);
   canvas.dispatchEvent(new CustomEvent("tool-moved"));
 };
 
 // Export button
 const exportButton = document.createElement("button");
-exportButton.innerHTML = "Export";
+exportButton.innerHTML = "💾";
 document.body.append(exportButton);
 
 exportButton.addEventListener("click", () => {
@@ -293,15 +298,13 @@ exportButton.addEventListener("click", () => {
   const exportCtx = exportCanvas.getContext("2d");
   if (!exportCtx) return;
 
-  const scaleFactor = exportCanvas.width / canvas.width; // 1024 / 256 = 4
+  const scaleFactor = exportCanvas.width / canvas.width;
   exportCtx.scale(scaleFactor, scaleFactor);
 
-  // 3️⃣ Redraw all saved commands (NO preview)
   for (const cmd of commands) {
     cmd.display(exportCtx);
   }
 
-  // 4️⃣ Trigger file download
   const anchor = document.createElement("a");
   anchor.href = exportCanvas.toDataURL("image/png");
   anchor.download = "sketchpad.png";
