@@ -25,6 +25,7 @@ interface PreviewCommand {
   setPosition(x: number, y: number): void;
 }
 
+// Create the preview for brush sizes
 class MarkerPreview implements PreviewCommand {
   x = 0;
   y = 0;
@@ -50,15 +51,18 @@ class MarkerPreview implements PreviewCommand {
   }
 }
 
+// Create the preview for stickers
 class StickerPreview implements PreviewCommand {
   x = 0;
   y = 0;
   sticker: string;
   size: number;
+  rotation: number;
 
-  constructor(sticker: string, size = 16) {
+  constructor(sticker: string, size = 16, rotation = 0) {
     this.sticker = sticker;
     this.size = size;
+    this.rotation = rotation;
   }
 
   setPosition(x: number, y: number) {
@@ -68,16 +72,19 @@ class StickerPreview implements PreviewCommand {
 
   draw(ctx: CanvasRenderingContext2D) {
     ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.rotation);
     ctx.globalAlpha = 0.6;
     ctx.font = `${this.size}px sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(this.sticker, this.x, this.y);
+    ctx.fillText(this.sticker, 0, 0);
     ctx.restore();
   }
 }
 
-function createLineCommand(width: number) {
+// Draw the line
+function createLineCommand(width: number, color: string) {
   const points: { x: number; y: number }[] = [];
   return {
     addPoint(x: number, y: number) {
@@ -87,6 +94,7 @@ function createLineCommand(width: number) {
       if (points.length < 2) return;
       ctx.beginPath();
       ctx.lineWidth = width;
+      ctx.strokeStyle = color;
       ctx.moveTo(points[0].x, points[0].y);
       for (let i = 1; i < points.length; i++) {
         ctx.lineTo(points[i].x, points[i].y);
@@ -96,19 +104,23 @@ function createLineCommand(width: number) {
   };
 }
 
+// Create the sticker
 function createStickerCommand(
   sticker: string,
   x: number,
   y: number,
   size = 16,
+  rotation = 0,
 ) {
   return {
     display(ctx: CanvasRenderingContext2D) {
       ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(rotation);
       ctx.font = `${size}px sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(sticker, x, y);
+      ctx.fillText(sticker, 0, 0);
       ctx.restore();
     },
   };
@@ -128,6 +140,11 @@ function render() {
   }
 }
 
+// Random rotation for step 12
+function randomRotation(): number {
+  return (Math.random() * 2 - 1) * Math.PI / 4;
+}
+
 const cursor = { active: false, x: 0, y: 0 };
 
 const commands: DrawCommand[] = [];
@@ -139,9 +156,11 @@ let currentCommand: ReturnType<typeof createLineCommand> | null = null;
 let brushSize = 1;
 let curTool: "marker" | "sticker" = "marker";
 let currentPreview: PreviewCommand | null = null;
+let rotation = 0;
 
 currentPreview = new MarkerPreview(brushSize / 2);
 
+// Preset stickers
 stickers.forEach((emoji) => {
   const btn = document.createElement("button");
   btn.textContent = emoji;
@@ -150,11 +169,13 @@ stickers.forEach((emoji) => {
   btn.addEventListener("click", () => {
     curTool = "sticker";
     curSticker = emoji;
-    currentPreview = new StickerPreview(curSticker, 16);
+    rotation = randomRotation();
+    currentPreview = new StickerPreview(curSticker, 16, rotation);
     canvas.dispatchEvent(new CustomEvent("tool-moved"));
   });
 });
 
+// Adding custom sticker button
 const addStickerBtn = document.createElement("button");
 addStickerBtn.textContent = "🪄";
 document.body.append(addStickerBtn);
@@ -176,19 +197,34 @@ addStickerBtn.addEventListener("click", () => {
   }
 });
 
+// For color picker
+const colorPicker = document.createElement("input");
+colorPicker.type = "color";
+colorPicker.value = "#000000";
+let color = colorPicker.value;
+document.body.append(colorPicker);
+
+colorPicker.addEventListener("input", () => {
+  color = colorPicker.value;
+  if (curTool == "marker") {
+    currentPreview = new MarkerPreview(brushSize / 2);
+    canvas.dispatchEvent(new CustomEvent("tool-moved"));
+  }
+});
+
 // Mouse is held down
 canvas.addEventListener("mousedown", (e) => {
   const x = e.offsetX;
   const y = e.offsetY;
   if (curTool === "marker") {
-    const cmd = createLineCommand(brushSize);
+    const cmd = createLineCommand(brushSize, color);
     cursor.active = true;
     cmd.addPoint(x, y);
     currentCommand = cmd;
     commands.push(cmd);
     redoCommands.length = 0;
   } else if (curTool === "sticker") {
-    const cmd = createStickerCommand(curSticker, x, y, 16);
+    const cmd = createStickerCommand(curSticker, x, y, 16, rotation);
     commands.push(cmd);
     redoCommands.length = 0;
   }
@@ -206,7 +242,6 @@ canvas.addEventListener("mousemove", (e) => {
     currentCommand.addPoint(x, y);
     canvas.dispatchEvent(new CustomEvent("drawing-changed"));
   } else {
-    // Update preview position if it exists
     if (currentPreview) {
       currentPreview.setPosition(x, y);
     }
